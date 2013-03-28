@@ -1,0 +1,5 @@
+syntax: regexp
+.idea
+
+syntax: glob
+*.pyc
