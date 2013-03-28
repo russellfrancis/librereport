@@ -1,5 +1,7 @@
 syntax: regexp
 .idea
+.project
+.pydevproject
 
 syntax: glob
 *.pyc
