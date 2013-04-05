@@ -2,7 +2,10 @@ syntax: regexp
 .idea
 .project
 .pydevproject
+.settings
 
 syntax: glob
 *.pyc
 *~
+.DS_Store
+Thumbs.db
