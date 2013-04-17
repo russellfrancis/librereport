@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#description     :Utility to setup initial db connection and retrieve report parameters.
+#author          :Brandon Tylke (brandon.tylke@lauren.com)
+#date            :2013-04-01
+#version         :0.0.1
+#license         :GPL v3 http://www.gnu.org/licenses/gpl.txt
+#python_version  :2.7.1  
+#==============================================================================
 
 import os
 import sys
