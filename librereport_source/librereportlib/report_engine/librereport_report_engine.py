@@ -90,15 +90,13 @@ class report_engine:
             t.start()
 
 
-
-
-
-
-
-
-
     def find_chart(self, chart_name, content=None):
-
+        """
+        Finds a chart by name within the given xml document.
+        :param chart_name: name of chart
+        :param content: document xml
+        :return: original chart placeholder xml and original chart nobject name
+        """
         if content is None:
             content = self.contentxml
 
@@ -135,8 +133,19 @@ class report_engine:
         return original_chart_content, chart_object_name
 
 
+    #Needs refactored
     def process_chart(self, chart_name, content, column_order, sql='', preformatted_data=None,
                       content_replacements=None):
+        """
+        Chart processing utility for libreoffice documents.
+        :param chart_name: Name of chart to find within the document xml
+        :param content: document xml
+        :param column_order: the reference names of the columns in the order they are to be used
+        :param sql: option sql to retrieve column data
+        :param preformatted_data: dict alternative to using sql to retrieve data
+        :param content_replacements: title replacements
+        :return: returns updated xml content string
+        """
         if not content_replacements: content_replacements = {}
         assert type(column_order) == tuple
 
@@ -180,7 +189,8 @@ class report_engine:
         #section_start, section_end, has_subsection = self.find_table('local-table', object_contentxml, False)
         self.log.log('found local-table')
         #original_chart_object_data_table_content = self.get_content(section_start, section_end, object_contentxml)
-        original_chart_object_data_table_content = object_contentxml.split('<table:table table:name="local-table">')[1].split('</table:table>')[0]
+        original_chart_object_data_table_content = \
+            object_contentxml.split('<table:table table:name="local-table">')[1].split('</table:table>')[0]
         self.log.log('found table content: %s' % original_chart_object_data_table_content)
 
         final_chart_object_data_table_content = ""
@@ -204,7 +214,8 @@ class report_engine:
                     else:
                         self.log.log('column %s' % column)
                         self.log.log('str(row[column]) %s' % str(row[column]))
-                        temp_content += '<table:table-cell office:value-type="string"><text:p>%s</text:p></table:table-cell>' % (str(row[column]))
+                        temp_content += '<table:table-cell office:value-type="string"><text:p>%s</text:p></table:table-cell>' % (
+                            str(row[column]))
 
                 #end the header row
                 temp_content += '</table:table-row></table:table-header-rows>'
@@ -222,10 +233,12 @@ class report_engine:
                     self.log.log('data column %s' % column)
                     self.log.log('data str(row[column]) %s' % str(row[column]))
                     if first_column:
-                        temp_content += '<table:table-cell office:value-type="string"><text:p>%s</text:p></table:table-cell>' % (str(row[column]))
+                        temp_content += '<table:table-cell office:value-type="string"><text:p>%s</text:p></table:table-cell>' % (
+                            str(row[column]))
                         first_column = False
                     else:
-                        temp_content += '<table:table-cell office:value-type="float" office:value="%s"><text:p>%s</text:p></table:table-cell>' % (str(row[column]), str(row[column]))
+                        temp_content += '<table:table-cell office:value-type="float" office:value="%s"><text:p>%s</text:p></table:table-cell>' % (
+                            str(row[column]), str(row[column]))
 
                 #end the row
                 temp_content += '</table:table-row>'
@@ -241,19 +254,14 @@ class report_engine:
         self.log.log("final_chart_object_data_table_content %s" % final_chart_object_data_table_content)
 
         #chart data table replacement
-        object_contentxml = object_contentxml.replace(original_chart_object_data_table_content, final_chart_object_data_table_content)
+        object_contentxml = object_contentxml.replace(original_chart_object_data_table_content,
+                                                      final_chart_object_data_table_content)
 
         #get a random number for a new chart name
-        new_chart_object_number = str(randint(10000,99999)) + str(int(time()))
+        new_chart_object_number = str(randint(10000, 99999)) + str(int(time()))
         new_chart_object_name = 'Object %s' % new_chart_object_number
         #create a replacement name for the main document
         new_chart_name = chart_name + new_chart_object_number
-
-        ##add the object to the self.newchartobjects var, so it is added to the final zip file
-        #self.newchartobjects[new_chart_object_name]["content.xml"] = object_contentxml
-        #self.newchartobjects[new_chart_object_name]["styles.xml"] = object_stylesxml
-        #self.newchartobjects[new_chart_object_name]["meta.xml"] = object_metaxml
-        #self.newchartobjects[new_chart_object_name]["ObjectReplacements"] = object_objectreplacements
 
         #add the chart object to the temp doc
         ziparchiveout = zipfile.ZipFile(self.temp_document, "a")
@@ -271,20 +279,29 @@ class report_engine:
         <manifest:file-entry manifest:media-type="text/xml" manifest:full-path="%s/styles.xml"/>
         <manifest:file-entry manifest:media-type="text/xml" manifest:full-path="%s/meta.xml"/>
         <manifest:file-entry manifest:media-type="application/vnd.oasis.opendocument.chart" manifest:full-path="%s/"/>
-        """ % (new_chart_object_name, new_chart_object_name, new_chart_object_name, new_chart_object_name, new_chart_object_name)
+        """ % (new_chart_object_name, new_chart_object_name, new_chart_object_name, new_chart_object_name,
+               new_chart_object_name)
 
-        self.manifestxml = self.manifestxml.replace("</manifest:manifest>","") #remove the closing tag
+        self.manifestxml = self.manifestxml.replace("</manifest:manifest>", "") #remove the closing tag
         self.manifestxml += new_manifest_entry + "\n</manifest:manifest>" #add the new entry and put the closing tag back
 
 
         #change the name in the main document and update the object it references
-        final_chart_content = original_chart_content.replace(original_chart_object_name, new_chart_object_name).replace(chart_name, new_chart_name)
+        final_chart_content = original_chart_content.replace(original_chart_object_name, new_chart_object_name).replace(
+            chart_name, new_chart_name)
         return_content = self.replace_section_content(original_chart_content, final_chart_content, '', content, False)
 
         return return_content
 
 
     def find_table_end(self, content, open_string='<table:table ', close_string='</table:table>'):
+        """
+        Find table closing tag position within given xml.
+        :param content: document xml content or content sub section
+        :param open_string: table open tag
+        :param close_string: table close tag
+        :return: table close position and if the table contains a sub table
+        """
         table_search_end = 0
         has_subtable = False
 
@@ -296,14 +313,15 @@ class report_engine:
         while tag_depth > 0:
 
             if content.find(open_string) != -1 and content.find(open_string) < content.find(close_string):
-                table_search_end += content.find(open_string)+len(open_string)
-                content = content[content.find(open_string)+len(open_string):]
+                table_search_end += content.find(open_string) + len(open_string)
+                content = content[content.find(open_string) + len(open_string):]
                 tag_depth += 1
                 has_subtable = True
 
-            elif content.find(close_string) != -1 and (content.find(close_string) < content.find(open_string) or content.find(open_string) == -1):
-                table_search_end += content.find(close_string)+len(close_string)
-                content = content[content.find(close_string)+len(close_string):]
+            elif content.find(close_string) != -1 and (
+                        content.find(close_string) < content.find(open_string) or content.find(open_string) == -1):
+                table_search_end += content.find(close_string) + len(close_string)
+                content = content[content.find(close_string) + len(close_string):]
                 tag_depth -= 1
 
         table_search_end -= len(close_string)
@@ -312,7 +330,14 @@ class report_engine:
 
 
     def find_table(self, table_name, content=None, strip_table_header=True, remove_footer_row=False):
-
+        """
+        Find a table by name within given document xml.
+        :param table_name: the name of the source document table
+        :param content: document xml content or content sub section
+        :param strip_table_header: if true, do not include the table header from the returned content positions
+        :param remove_footer_row: if true, do not include the table footer from the returned content positions
+        :return: table start position within the content (int), table end position (int), if a sub table exists (bool)
+        """
         if content is None:
             content = self.contentxml
 
@@ -329,13 +354,15 @@ class report_engine:
         else:
             table_start += content[table_start:].find('>')
             #we don't want to include the table, just its content
-    #        table_start += len(table_search)
+            #        table_start += len(table_search)
 
-            if content[table_start:].find("<table:table-row>") != -1 or content[table_start:].find("<table:table-row table:style-name=") != -1:
+            if content[table_start:].find("<table:table-row>") != -1 or content[table_start:].find(
+                    "<table:table-row table:style-name=") != -1:
                 #this is terrible - it could be either of these
                 possible_table_start_short_tag = content[table_start:].find("<table:table-row>")
                 possible_table_start_long_tag = content[table_start:].find("<table:table-row table:style-name=")
-                if (possible_table_start_short_tag != -1 and possible_table_start_short_tag < possible_table_start_long_tag) or possible_table_start_long_tag == -1:
+                if (
+                            possible_table_start_short_tag != -1 and possible_table_start_short_tag < possible_table_start_long_tag) or possible_table_start_long_tag == -1:
                     table_start += possible_table_start_short_tag
                 else:
                     table_start += possible_table_start_long_tag
@@ -353,7 +380,8 @@ class report_engine:
             if header_check_content.find('</table:table-header-rows>') != -1 and strip_table_header:
 
                 #we don't want to start at the header of the sub table
-                if has_subtable and header_check_content.find('</table:table-header-rows>') > header_check_content.find('<table:table '):
+                if has_subtable and header_check_content.find('</table:table-header-rows>') > header_check_content.find(
+                        '<table:table '):
                     pass
                 else:
                     table_start += header_check_content.find('</table:table-header-rows>')
@@ -374,8 +402,14 @@ class report_engine:
         return table_start, table_end, has_subtable
 
 
-
     def find_section_end(self, content, open_string='<text:section ', close_string='</text:section>'):
+        """
+        Find the end of a section within xml.
+        :param content: document xml content or content sub section
+        :param open_string: text section open tag
+        :param close_string: text section close tag
+        :return: text section close position and if the section contains a sub section
+        """
         section_search_end = 0
         has_subsection = False
 
@@ -387,14 +421,15 @@ class report_engine:
         while tag_depth > 0:
 
             if content.find(open_string) != -1 and content.find(open_string) < content.find(close_string):
-                section_search_end += content.find(open_string)+len(open_string)
-                content = content[content.find(open_string)+len(open_string):]
+                section_search_end += content.find(open_string) + len(open_string)
+                content = content[content.find(open_string) + len(open_string):]
                 tag_depth += 1
                 has_subsection = True
 
-            elif content.find(close_string) != -1 and (content.find(close_string) < content.find(open_string) or content.find(open_string) == -1):
-                section_search_end += content.find(close_string)+len(close_string)
-                content = content[content.find(close_string)+len(close_string):]
+            elif content.find(close_string) != -1 and (
+                        content.find(close_string) < content.find(open_string) or content.find(open_string) == -1):
+                section_search_end += content.find(close_string) + len(close_string)
+                content = content[content.find(close_string) + len(close_string):]
                 tag_depth -= 1
 
         section_search_end -= len(close_string)
@@ -403,6 +438,12 @@ class report_engine:
 
 
     def find_section(self, section_name, content=None):
+        """
+        Find a section within given document xml.
+        :param section_name: name of the source document section
+        :param content: document xml content or content sub section
+        :return:  section start position within the content (int), section end position (int), if a sub section exists (bool)
+        """
         if content is None:
             content = self.contentxml
 
@@ -437,16 +478,28 @@ class report_engine:
         return section_start, section_end, has_subsection
 
     def clear_section(self, section_name):
+        """
+        Clears the content of a section.
+        :param section_name: name of the source document section
+        """
         section_start, section_end, has_subsection = self.find_section(section_name)
         original_section_content = self.get_section_content(section_start, section_end)
-        self.contentxml = self.contentxml.replace(original_section_content,'')
-        return
-
+        self.contentxml = self.contentxml.replace(original_section_content, '')
+        
     def update_content(self, section_content, new_section_content):
-        self.contentxml = self.contentxml.replace(section_content, new_section_content)
-        return
+        """
 
+        :param section_content: original document source xml
+        :param new_section_content: replacement xml
+        """
+        self.contentxml = self.contentxml.replace(section_content, new_section_content)
+        
     def find_next_section(self, position):
+        """
+        Utility to find the name of the next section within a document.
+        :param position: start position
+        :return: name of section, section start position, section end position, bool if section contains another section
+        """
         next_section_name = None
         section_start = 0
         section_end = 0
@@ -475,7 +528,12 @@ class report_engine:
 
     #we must specify at least one document variable to look for to know we have the correct row
     def get_spreadsheet_data_rows(self, document_variables, content=None):
-        #self.log.log('get_spreadsheet_data_rows')
+        """
+        Finds the target rows within a spreadsheet.
+        :param document_variables: Currently you must supply a single variable we are looking to replace within the xml
+        :param content: document xml
+        :return: row start position or false if variable is not found within the document
+        """
         if content is None:
             content = self.contentxml
 
@@ -528,7 +586,7 @@ class report_engine:
                 #get the end of the next tag
                 next_row_tag_end = tmp_content.find(">")
                 self.log.log("next_row_tag_end %s" % str(next_row_tag_end))
-                self.log.log("\nSearch tmp_content: "+tmp_content[:next_row_tag_end])
+                self.log.log("\nSearch tmp_content: " + tmp_content[:next_row_tag_end])
 
                 if 'table:table table:name="' in tmp_content[:next_row_tag_end]:
                     self.log.log("Found table:table:table table:name=")
@@ -539,7 +597,8 @@ class report_engine:
                     found_end = True
                     row_end += tmp_row_start
                 else:
-                    if tmp_content.find('</table:table-row>') != -1 and tmp_content.find('</table:table-row>') < tmp_content.find('</table:table>'):
+                    if tmp_content.find('</table:table-row>') != -1 and tmp_content.find(
+                            '</table:table-row>') < tmp_content.find('</table:table>'):
                         tmp_row_start = tmp_content.find('</table:table-row>')
                         if tmp_row_start != -1:
                             tmp_row_start += len('</table:table-row>')
@@ -547,9 +606,6 @@ class report_engine:
                         tmp_row_start = tmp_content.find('</table:table>')
                         if tmp_row_start != -1:
                             tmp_row_start += len('</table:table>')
-
-
-
 
         self.log.log("row_start %s" % str(row_start))
         self.log.log("row_end %s" % str(row_end))
@@ -561,19 +617,36 @@ class report_engine:
 
 
     def get_section_content(self, section_start, section_end, content=None):
+        """
+        Grab xml for specified section.
+        :param section_start: start position within xml
+        :param section_end: end position within xml
+        :param content: document xml
+        :return: section xml
+        """
         if content is None:
             content = self.contentxml
 
         return content[section_start:section_end]
 
-    def replace_section_content(self, original_content, replacement_content, section_name='', content=None, strip_section_marker=True):
+    def replace_section_content(self, original_content, replacement_content, section_name='', content=None,
+                                strip_section_marker=True):
+        """
+
+        :param original_content: original document section xml
+        :param replacement_content: new section xml
+        :param section_name: name of section, only required if you are stripping the section marker from the document
+        :param content: document xml
+        :param strip_section_marker: if True this will strip the section marker from the document xml
+        :return: updated document xml
+        """
         if content is None:
             content = self.contentxml
 
         if strip_section_marker:
             original_content = '<text:section text:style-name="Sect1" text:name="' + section_name + '">' + original_content + '</text:section>'
 
-        content = content.replace(original_content,replacement_content)
+        content = content.replace(original_content, replacement_content)
 
         return content
 
@@ -606,7 +679,7 @@ class report_engine:
 
             replacement_data = quoteattr(replacement_value)[1:-1]
 
-            content = content.replace(sub[0],replacement_data)
+            content = content.replace(sub[0], replacement_data)
 
         return content
 
@@ -618,7 +691,8 @@ class report_engine:
     #
     ################################################################################################################################################################################################################################
 
-    def process_section(self, section_name, content, sql, substitutions, image_details=None, display_no_data_message=True):
+    def process_section(self, section_name, content, sql, substitutions, image_details=None,
+                        display_no_data_message=True):
         assert type(substitutions) == tuple
 
         if self.sql is None:
@@ -634,7 +708,7 @@ class report_engine:
         except StandardError, e:
             self.log.log("Got Error: %s on sql: %s" % (str(e), sql))
             sys.exit(255)
-        #self.log.log('section_name: %s' % str(section_name))
+            #self.log.log('section_name: %s' % str(section_name))
         #self.log.log('content: %s' % str(content))
         section_start, section_end, has_subsection = self.find_section(section_name, content)
 
@@ -661,7 +735,8 @@ class report_engine:
             self.log.log('No Data Entered for %s' % str(section_name))
             final_section_content = '<text:p text:style-name="Standard">No Data Entered</text:p>'
 
-        return_content = self.replace_section_content(original_section_content, final_section_content, section_name, content)
+        return_content = self.replace_section_content(original_section_content, final_section_content, section_name,
+                                                      content)
 
         return return_content
 
@@ -688,9 +763,10 @@ class report_engine:
         except StandardError, e:
             self.log.log("Got Error: %s on sql: %s" % (str(e), sql))
             sys.exit(255)
-        #self.log.log('table_name: %s' % str(table_name))
+            #self.log.log('table_name: %s' % str(table_name))
         #self.log.log('content: %s' % str(content))
-        section_start, section_end, has_subsection = self.find_table(table_name, content, remove_footer_row=remove_footer_row)
+        section_start, section_end, has_subsection = self.find_table(table_name, content,
+                                                                     remove_footer_row=remove_footer_row)
 
         original_section_content = self.get_section_content(section_start, section_end, content)
 
@@ -718,7 +794,8 @@ class report_engine:
             self.log.log('No Data Entered for %s' % str(table_name))
             final_section_content = '<text:p text:style-name="Standard">No Data Entered</text:p>'
 
-        return_content = self.replace_section_content(original_section_content, final_section_content, table_name, content, False)
+        return_content = self.replace_section_content(original_section_content, final_section_content, table_name,
+                                                      content, False)
 
         return return_content
 
@@ -746,7 +823,8 @@ class report_engine:
                 #this passes a list of variables to look for in the xml
                 search_variable = []
                 for sub in substitutions:
-                    search_variable.append(sub[0]) #this makes the assumption that this varaible occurs on the first row to be swapped out
+                    search_variable.append(
+                        sub[0]) #this makes the assumption that this varaible occurs on the first row to be swapped out
         elif type(search_variable) == str:
             search_variable = list(search_variable)
 
@@ -766,7 +844,8 @@ class report_engine:
         #self.log.log('final_section_content' + str(final_section_content)) 
         #self.log.log('content' + str(content)) 
 
-        return_content = self.replace_section_content(original_section_content, final_section_content, '', content, False)
+        return_content = self.replace_section_content(original_section_content, final_section_content, '', content,
+                                                      False)
 
         return return_content
 
@@ -830,7 +909,7 @@ class report_engine:
         new_image_content = new_image_content.replace(old_image_width_string, 'svg:width="%sin"' % new_image_width)
         new_image_content = new_image_content.replace(old_image_height_string, 'svg:height="%sin"' % new_image_height)
 
-        content = content.replace(old_image_content,new_image_content)
+        content = content.replace(old_image_content, new_image_content)
 
         return content
 
@@ -838,14 +917,14 @@ class report_engine:
         try:
             #image_full_path = os.path.join(image_path, image_name)
             self.log.log("opening image: %s" % image_full_path)
-            image_file = open(image_full_path,'rb')
+            image_file = open(image_full_path, 'rb')
             image_data = image_file.read()
             image_file.close()
 
             image_extension = os.path.splitext(image_full_path)[1] # '.ext'
-            image_extension = image_extension.replace('.','') # 'ext'
+            image_extension = image_extension.replace('.', '') # 'ext'
 
-            new_image_name = str(randint(10000,99999)) + str(int(time())) + '.' +image_extension
+            new_image_name = str(randint(10000, 99999)) + str(int(time())) + '.' + image_extension
 
             #get image size, so we can calculate ratios when adding the image
             try:
@@ -859,14 +938,14 @@ class report_engine:
                     im.save(resampled_image)
 
                     #read resampled image
-                    image_file = open(resampled_image,'rb')
+                    image_file = open(resampled_image, 'rb')
                     image_data = image_file.read()
                     image_file.close()
                 except StandardError, e:
                     self.log.log("could not save resampled image, got error: %s" % str(e))
 
             except:
-                self.image_sizes[new_image_name] = [1,1]
+                self.image_sizes[new_image_name] = [1, 1]
 
             ziparchiveout = zipfile.ZipFile(self.temp_document, "a")
             ziparchiveout.writestr("Pictures/%s" % new_image_name, image_data)
@@ -874,8 +953,9 @@ class report_engine:
             ziparchiveout.close()
 
             #print "update manifest"
-            new_manifest_entry = '<manifest:file-entry manifest:media-type="image/%s" manifest:full-path="Pictures/%s"/>' % (image_extension, new_image_name)
-            self.manifestxml = self.manifestxml.replace("</manifest:manifest>","") #remove the closing tag
+            new_manifest_entry = '<manifest:file-entry manifest:media-type="image/%s" manifest:full-path="Pictures/%s"/>' % (
+                image_extension, new_image_name)
+            self.manifestxml = self.manifestxml.replace("</manifest:manifest>", "") #remove the closing tag
             self.manifestxml += new_manifest_entry + "\n</manifest:manifest>" #add the new entry and put the closing tag back
             return new_image_name
         except StandardError, e:
@@ -922,7 +1002,8 @@ class report_engine:
                 self.originalchartobjects[object_name]["content.xml"] = ziparchive.read(object_name + "/content.xml")
                 self.originalchartobjects[object_name]["styles.xml"] = ziparchive.read(object_name + "/styles.xml")
                 self.originalchartobjects[object_name]["meta.xml"] = ziparchive.read(object_name + "/meta.xml")
-                self.originalchartobjects[object_name]["ObjectReplacements"] = ziparchive.read("ObjectReplacements/" + object_name)
+                self.originalchartobjects[object_name]["ObjectReplacements"] = ziparchive.read(
+                    "ObjectReplacements/" + object_name)
 
                 # <manifest:file-entry manifest:media-type="application/x-openoffice-gdimetafile;windows_formatname=&quot;GDIMetaFile&quot;" manifest:full-path="ObjectReplacements/Object 1"/>
                 #<manifest:file-entry manifest:media-type="text/xml" manifest:full-path="Object 1/content.xml"/>
@@ -933,7 +1014,8 @@ class report_engine:
         self.temp_directory = tempfile.mkdtemp()
         #print "self.temp_directory", self.temp_directory
 
-        self.temp_document = os.path.join(self.temp_directory, str(randint(10000,99999)) + str(int(time())) + "_output.odt")
+        self.temp_document = os.path.join(self.temp_directory,
+                                          str(randint(10000, 99999)) + str(int(time())) + "_output.odt")
 
         #create a master temp document here
         #http://stackoverflow.com/questions/4653768/overwriting-file-in-ziparchive
@@ -946,7 +1028,7 @@ class report_engine:
             if item.filename not in exclude_files:
                 data = ziparchive.read(item.filename)
                 zipwrite.writestr(item, data)
-            #else:
+                #else:
                 #print "skipped item.filename", item.filename
 
         #new doc
@@ -956,10 +1038,11 @@ class report_engine:
         ziparchive.close()
 
     def save_document(self):
-        self.contentxml = self.contentxml.replace('-----newline-----','<text:line-break/>')
-        self.stylesxml = self.stylesxml.replace('-----newline-----','<text:line-break/>')
+        self.contentxml = self.contentxml.replace('-----newline-----', '<text:line-break/>')
+        self.stylesxml = self.stylesxml.replace('-----newline-----', '<text:line-break/>')
 
-        self.output_documents.insert(0, os.path.join(self.temp_directory, str(randint(10000,99999)) + str(int(time())) + "_output.odt"))
+        self.output_documents.insert(0, os.path.join(self.temp_directory,
+                                                     str(randint(10000, 99999)) + str(int(time())) + "_output.odt"))
 
         #create output file
         shutil.copy2(self.temp_document, self.output_documents[0])
@@ -1020,17 +1103,17 @@ class report_engine:
         temp_doc = self.save_document()
         self.log.log("Temporary ODF Document: %s" % temp_doc)
         file_path, original_file = os.path.split(temp_doc)
-        filename = original_file+'.'+output_type
+        filename = original_file + '.' + output_type
         temp_output_file = os.path.join(self.conf.completed_report_path, filename)
 
         #let the user know that we are creating their output file
         if self.sql is not None:
             try:
-                if output_type=='pdf':
+                if output_type == 'pdf':
                     cur = self.sql.cursor()
                     cur.execute("UPDATE reports SET status='generating_pdf' WHERE id = %s;" % self.conf.job_id)
                     self.sql.commit()
-                elif output_type=='xls':
+                elif output_type == 'xls':
                     cur = self.sql.cursor()
                     cur.execute("UPDATE reports SET status='generating_xls' WHERE id = %s;" % self.conf.job_id)
                     self.sql.commit()
@@ -1055,7 +1138,8 @@ class report_engine:
             self.log.log("convert: %s" % self.conf.doc_converter_path)
             self.log.log("input f: %s" % temp_doc)
             self.log.log("output : %s" % temp_output_file)
-            self.soffice_proc = subprocess.Popen([self.conf.python_cmd, self.conf.doc_converter_path, temp_doc, temp_output_file])
+            self.soffice_proc = subprocess.Popen(
+                [self.conf.python_cmd, self.conf.doc_converter_path, temp_doc, temp_output_file])
             #start a thread to watch for a user cancelling the job
 
             #wait for it to finish - we use Popen instead of call(0 so i can kill the process if the user cancels the report
@@ -1066,20 +1150,21 @@ class report_engine:
         if self.sql is not None:
             try:
                 #let the user know that we have completed the conversion
-                cur.execute("UPDATE reports SET status='complete', filename='%s', original_filename='%s.%s', mimetype='application/%s' WHERE id = %s;" % (filename, self.params['report_name'], output_type, output_type, self.conf.job_id))
+                cur.execute(
+                    "UPDATE reports SET status='complete', filename='%s', original_filename='%s.%s', mimetype='application/%s' WHERE id = %s;" % (
+                        filename, self.params['report_name'], output_type, output_type, self.conf.job_id))
                 self.sql.commit()
 
             except StandardError, e:
                 self.log.log("Unable to update report status.  Got error: %s" % str(e))
                 pass
 
-
         return temp_output_file
 
     def send_mail(self, send_from, send_to, files=None):
         if not files: files = []
-        assert type(send_to)==list
-        assert type(files)==list
+        assert type(send_to) == list
+        assert type(files) == list
 
         msg = MIMEMultipart()
         msg['From'] = send_from
@@ -1089,19 +1174,19 @@ class report_engine:
 
         self.log.log("Composing email to: %s" % msg['To'])
 
-        msg.attach( MIMEText(self.conf.default_mail_message) )
+        msg.attach(MIMEText(self.conf.default_mail_message))
 
         for f in files:
             self.log.log("Attaching file: %s" % f)
             part = MIMEBase('application', "octet-stream")
-            part.set_payload( open(f,"rb").read() )
+            part.set_payload(open(f, "rb").read())
             Encoders.encode_base64(part)
             part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
             msg.attach(part)
 
         self.log.log("Email server auth...")
 
-        mailServer = smtplib.SMTP(self.conf.smtp_server,self.conf.smtp_port)
+        mailServer = smtplib.SMTP(self.conf.smtp_server, self.conf.smtp_port)
         mailServer.ehlo()
         mailServer.starttls()
         mailServer.ehlo()
@@ -1111,11 +1196,11 @@ class report_engine:
 
         self.log.log("Email sent...")
 
-################################################################
-#
-#   Report inspector bits...
-#
-################################################################
+    ################################################################
+    #
+    #   Report inspector bits...
+    #
+    ################################################################
 
     def report_inspector_find_sections(self):
         sections = []
@@ -1127,8 +1212,8 @@ class report_engine:
         #<text:section text:style-name="Sect1" text:name="
 
         while content.find('<text:section ') != -1:
-            content = content[content.find('<text:section ')+len('<text:section '):]
-            content = content[content.find('text:name="')+len('text:name="'):]
+            content = content[content.find('<text:section ') + len('<text:section '):]
+            content = content[content.find('text:name="') + len('text:name="'):]
             if content[:content.find('"')] in sections:
                 if content[:content.find('"')] not in duplicate_sections:
                     duplicate_sections.append(content[:content.find('"')])
@@ -1147,7 +1232,7 @@ class report_engine:
         #<text:section text:style-name="Sect1" text:name="
 
         while content.find('<table:table table:name="') != -1:
-            content = content[content.find('<table:table table:name="')+len('<table:table table:name="'):]
+            content = content[content.find('<table:table table:name="') + len('<table:table table:name="'):]
             if content[:content.find('"')] in tables:
                 if content[:content.find('"')] not in duplicate_tables:
                     duplicate_tables.append(content[:content.find('"')])
@@ -1166,14 +1251,14 @@ class report_engine:
         #<text:section text:style-name="Sect1" text:name="
 
         while content.find('$') != -1:
-            content = content[content.find('$')+1:]
-            if '$'+content[:content.find('$')+1] in variables:
-                if '$'+content[:content.find('$')+1] not in duplicate_variables:
-                    duplicate_variables.append('$'+content[:content.find('$')+1])
+            content = content[content.find('$') + 1:]
+            if '$' + content[:content.find('$') + 1] in variables:
+                if '$' + content[:content.find('$') + 1] not in duplicate_variables:
+                    duplicate_variables.append('$' + content[:content.find('$') + 1])
             else:
-                variables.append('$'+content[:content.find('$')+1])
+                variables.append('$' + content[:content.find('$') + 1])
 
-            content = content[content.find('$')+1:]
+            content = content[content.find('$') + 1:]
 
         return variables, duplicate_variables
 
@@ -1189,11 +1274,11 @@ class report_engine:
         os.kill(int(os.getpid()), signal.SIGTERM)
         sys.exit(255)
 
-################################################################
-#
-#   Threading bits...
-#
-################################################################
+    ################################################################
+    #
+    #   Threading bits...
+    #
+    ################################################################
     def watch_for_cancel(self):
 
         if self.sql is None:
@@ -1232,9 +1317,10 @@ class report_engine:
                     self.log.log("Stopping the watch thread.")
                     self.run_thread = False
 
-
-                if self.conf.max_report_runtime is not None and (time() - self.start_time) > self.conf.max_report_runtime:
-                    self.log.log("We've run for more than %s seconds. I am killing the watch thread." % self.conf.max_report_runtime)
+                if self.conf.max_report_runtime is not None and (
+                        time() - self.start_time) > self.conf.max_report_runtime:
+                    self.log.log(
+                        "We've run for more than %s seconds. I am killing the watch thread." % self.conf.max_report_runtime)
                     self.run_thread = False
                     sleep(30)
                     self.kill_engine("report ran too long.")
