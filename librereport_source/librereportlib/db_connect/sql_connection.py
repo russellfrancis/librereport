@@ -43,8 +43,8 @@ class sql_connection:
         #PEP: 249 compatible module for your database
         dbinterface = None
         self.dbinterface = None
-        if self.db_module != None:
-            exec("import %s as dbinterface" % (self.db_module))
+        if self.db_module is not None:
+            exec("import %s as dbinterface" % self.db_module)
             self.dbinterface = dbinterface
             
             if self.db_module == 'psycopg2':
@@ -53,22 +53,22 @@ class sql_connection:
         
     def connect(self):
         
-        connect_string = "database='%s'" % (self.db_dbname)
+        connect_string = "database='%s'" % self.db_dbname
         
-        if self.db_server != None:
+        if self.db_server is not None:
             connect_string = "%s, host='%s'" % (connect_string, self.db_server)
         
-        if self.db_user != None:
+        if self.db_user is not None:
             connect_string = "%s, user='%s'" % (connect_string, self.db_user)
         
-        if self.db_password != None:
+        if self.db_password is not None:
             connect_string = "%s, password='%s'" % (connect_string, self.db_password)
         
-        if self.db_port != None:
+        if self.db_port is not None:
             connect_string = "%s, port='%s'" % (connect_string, self.db_port)
 
         #this is a hackish way to get around a limitation I hit when connecting with sqlite3
-        exec("self.connection = self.dbinterface.connect(%s)" % (connect_string))
+        exec("self.connection = self.dbinterface.connect(%s)" % connect_string)
         
         if self.db_module == 'psycopg2':
             self.connection = psycopg2.extras.DictConnection
@@ -87,9 +87,9 @@ class sql_connection:
     
     
     def cursor(self, connection=None):
-        if connection == None:
+        if connection is None:
             #do we have a connection yet?
-            if self.connection == None:
+            if self.connection is None:
                 self.connect()
                 
             connection = self.connection
@@ -113,20 +113,20 @@ class sql_connection:
         return new_cursor
     
     def commit(self, connection=None):
-        if connection == None:
+        if connection is None:
             connection = self.connection
         
         return connection.commit()
     
     def close(self, connection=None):
-        if connection == None:
+        if connection is None:
             connection = self.connection
         
         return connection.close()
     
     # I often use this table to pass parameters from external application to LibreReport
     def get_job_details(self, job_id):
-        if self.connection == None:
+        if self.connection is None:
             self.connect()
         
         #CREATE TABLE reports

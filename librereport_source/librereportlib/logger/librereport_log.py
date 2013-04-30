@@ -20,7 +20,7 @@ class itslog:
         self.savelog = savelog
 
         # If we don't have a default log file path provided, use some defaults.
-        if log_root == None:
+        if log_root is None:
             if sys.platform == 'win32':
                 log_root = os.path.join(os.environ['USERPROFILE'],'.librereport', 'logs')
             else:
@@ -51,7 +51,7 @@ class itslog:
         self.logfile = os.path.join(log_root, now + "_librereportlog.txt")
 
     def log(self, text, time_stamp=True):
-        if self.savelog == True:
+        if self.savelog:
             text = str(text)
             if text[-1:] == '\n':
                 text = text[:-1]
@@ -71,14 +71,14 @@ class itslog:
                 pass
     
     def new_session(self):
-        if self.savelog == True:
+        if self.savelog:
             text = "\n\n\n\n--------------------------------------------\n"
-            text = text + str("  LibreReport Started: " + time.ctime() + "\n")
-            text = text +  "--------------------------------------------\n"
+            text += str("  LibreReport Started: " + time.ctime() + "\n")
+            text += "--------------------------------------------\n"
             
             try:
-                text = text + str("  PID: " + str(os.getpid()) + "\n")
-                text = text +  "--------------------------------------------\n"
+                text += str("  PID: " + str(os.getpid()) + "\n")
+                text += "--------------------------------------------\n"
             except StandardError, e:
                 print "Get PID Error:", e
                 pass

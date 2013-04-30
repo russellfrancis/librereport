@@ -93,11 +93,11 @@ if __name__ == "__main__":
     
     #import the db connection
     sql = None
-    if conf.db_module != None:
+    if conf.db_module is not None:
         sql = sql_connection(conf.db_module, conf.db_dbname)
     
     #get parameters from the db connection
-    if sql != None and conf.job_id != None:
+    if sql is not None and conf.job_id is not None:
         params = sql.get_job_details(conf.job_id)
     
     log.log("Params: %s" % (str(params)))
